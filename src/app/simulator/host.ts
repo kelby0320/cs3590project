@@ -1,6 +1,7 @@
 import { Frame, FrameType } from './frame';
 import { Channel } from './channel';
 import { HostConfig } from './host_config';
+import { FillStyle } from './fill_style';
 
 export class Host {
   private sendingBuffer: Array<Frame>;
@@ -11,14 +12,15 @@ export class Host {
   private lastReceivingFrameReceived: number;
   private messageLength: number;
   private rrResponse: Frame;
+  private rrResponseIdx: number;
   private readonly config: HostConfig;
   private readonly name: string;
   private readonly x_pos: number;
   private readonly y_pos: number;
-  private readonly height: number;
-  private readonly width: number;
   private readonly bufferWidth: number;
   private readonly bufferHeight: number;
+  private readonly horizontalGap: number;
+  private readonly verticalGap: number;
 
   public constructor(config: HostConfig, name: string, x_pos: number, y_pos: number) {
     this.config = config;
@@ -31,15 +33,16 @@ export class Host {
     this.lastReceivingFrameReceived = -1;
     this.messageLength = 0;
     this.rrResponse = null;
+    this.rrResponseIdx = null;
     this.x_pos = x_pos;
     this.y_pos = y_pos;
-    this.height = 480;
-    this.width = 100;
     this.bufferWidth = 400;
     this.bufferHeight = 80;
+    this.horizontalGap = 5;
+    this.verticalGap = 5;
 
-    let hzgap = 5;
-    let vtgap = 5;
+    let hzgap = this.horizontalGap;
+    let vtgap = this.verticalGap;
 
     //Initialize buffers
     for (let i = 0; i < this.config.bufSize; i++) {
@@ -109,6 +112,7 @@ export class Host {
     //Send RR rrResponse
     if (this.rrResponse !== null &&
       timestep % this.config.stepsPerSend === 0) {
+      this.lastReceivingFrameAck = this.rrResponseIdx;
       this.config.channelSend(this.rrResponse);
       //console.log(this.name + " - Sent RR: " + this.rrResponse.number);
       this.rrResponse = null;
@@ -116,7 +120,7 @@ export class Host {
 
     //Receive Frame
     let r = this.config.channelReceive();
-    if (r !== null) {
+    if (r !== null && r.error !== true) {
       if (r.type === FrameType.RR) {
         //console.log(this.name + " - Recieved RR: " + r.number);
         //Received RR Frame
@@ -150,11 +154,10 @@ export class Host {
             this.lastReceivingFrameReceived++;
 
             //Prepare RR Response
-            this.lastReceivingFrameAck = this.lastReceivingFrameReceived;
-
             this.rrResponse = new Frame();
             this.rrResponse.type = FrameType.RR;
             this.rrResponse.number = (this.lastReceivingFrameReceived + 1) % this.config.sequenceMod;
+            this.rrResponseIdx = this.lastReceivingFrameReceived + 1;
 
           } //end else
         } //end if
@@ -174,6 +177,23 @@ export class Host {
     ctx.lineTo(x, y);
     ctx.stroke();
 
+    //Draw Sliding window
+    let start_x = x + (this.lastSendingFrameTransmitted + 1) * Frame.width
+      + (this.lastSendingFrameTransmitted + 1) * this.horizontalGap;
+    let end_x = x + (this.lastSendingFrameAck + this.config.maxWindowSize + 1) * Frame.width
+      + (this.lastSendingFrameAck + this.config.maxWindowSize + 2) * this.horizontalGap;
+    if (end_x > x + this.bufferWidth) end_x = x + this.bufferWidth;
+
+    ctx.beginPath()
+    ctx.moveTo(start_x, y);
+    ctx.lineTo(start_x, y + this.bufferHeight);
+    ctx.lineTo(end_x, y + this.bufferHeight);
+    ctx.lineTo(end_x, y);
+    ctx.lineTo(start_x, y);
+    ctx.fillStyle = FillStyle.SlidingWindow;
+    ctx.fill();
+    ctx.fillStyle = FillStyle.Default;
+
     y = y + 3 * this.bufferHeight + 30;
 
     //Draw receiving buffer
@@ -184,6 +204,23 @@ export class Host {
     ctx.lineTo(x + this.bufferWidth, y);
     ctx.lineTo(x, y);
     ctx.stroke();
+
+    //Draw Sliding window
+    start_x = x + (this.lastReceivingFrameReceived + 1) * Frame.width
+      + (this.lastReceivingFrameReceived + 1) * this.horizontalGap;
+    end_x = x + (this.lastReceivingFrameAck + this.config.maxWindowSize + 1) * Frame.width
+      + (this.lastReceivingFrameAck + this.config.maxWindowSize + 2) * this.horizontalGap;
+    if (end_x > x + this.bufferWidth) end_x = x + this.bufferWidth;
+
+    ctx.beginPath()
+    ctx.moveTo(start_x, y);
+    ctx.lineTo(start_x, y + this.bufferHeight);
+    ctx.lineTo(end_x, y + this.bufferHeight);
+    ctx.lineTo(end_x, y);
+    ctx.lineTo(start_x, y);
+    ctx.fillStyle = FillStyle.SlidingWindow;
+    ctx.fill();
+    ctx.fillStyle = FillStyle.Default;
 
     //Draw frames in sending buffer
     for (let i of this.sendingBuffer) {

@@ -37,6 +37,8 @@ export class AppComponent implements OnInit {
     let canvas = this.canvasRef.nativeElement;
     let ctx = canvas.getContext('2d');
 
+    console.log(ctx.fillStyle);
+
     this.host1.draw(ctx);
     this.host2.draw(ctx);
     this.channel.draw(ctx);

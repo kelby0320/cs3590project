@@ -1,7 +1,10 @@
+import { FillStyle } from './fill_style'
+
 export class Frame {
   public data: any;
   public number: number;
   public type: FrameType;
+  public error: boolean;
   public x_pos: number;
   public y_pos: number;
   public static readonly width: number = 23;
@@ -12,6 +15,7 @@ export class Frame {
     f.data = this.data;
     f.number = this.number;
     f.type = this.type;
+    f.error = this.error;
     f.x_pos = this.x_pos;
     f.y_pos = this.y_pos;
     return f;
@@ -33,7 +37,14 @@ export class Frame {
     ctx.lineTo(this.x_pos + Frame.width, this.y_pos + Frame.height);
     ctx.lineTo(this.x_pos + Frame.width, this.y_pos);
     ctx.lineTo(this.x_pos, this.y_pos);
-    ctx.stroke();
+
+    if (this.error)
+      ctx.fillStyle = FillStyle.FrameErr;
+    else
+      ctx.fillStyle = FillStyle.FrameOK;
+      
+    ctx.fill();
+    ctx.fillStyle = FillStyle.Default;
   }
 }
 
