@@ -13,8 +13,14 @@ export class Host {
   private rrResponse: Frame;
   private readonly config: HostConfig;
   private readonly name: string;
+  private readonly x_pos: number;
+  private readonly y_pos: number;
+  private readonly height: number;
+  private readonly width: number;
+  private readonly bufferWidth: number;
+  private readonly bufferHeight: number;
 
-  public constructor(config: HostConfig, name: string) {
+  public constructor(config: HostConfig, name: string, x_pos: number, y_pos: number) {
     this.config = config;
     this.name = name;
     this.sendingBuffer = new Array<Frame>(config.bufSize);
@@ -25,6 +31,15 @@ export class Host {
     this.lastReceivingFrameReceived = -1;
     this.messageLength = 0;
     this.rrResponse = null;
+    this.x_pos = x_pos;
+    this.y_pos = y_pos;
+    this.height = 480;
+    this.width = 100;
+    this.bufferWidth = 400;
+    this.bufferHeight = 80;
+
+    let hzgap = 5;
+    let vtgap = 5;
 
     //Initialize buffers
     for (let i = 0; i < this.config.bufSize; i++) {
@@ -34,8 +49,13 @@ export class Host {
 
       f1.number = seqnum;
       f1.type = FrameType.FRAME;
+      f1.x_pos = this.x_pos + ((i + 1) * hzgap) + (i * Frame.width);
+      f1.y_pos = this.y_pos + vtgap;
+
       f2.number = seqnum;
       f2.type = FrameType.FRAME;
+      f2.x_pos = this.x_pos + ((i + 1) * hzgap) + (i * Frame.width);
+      f2.y_pos = this.y_pos + 3 * this.bufferHeight + 30 + vtgap;
 
       this.sendingBuffer[i] = f1;
       this.receivingBuffer[i] = f2;
@@ -81,7 +101,7 @@ export class Host {
         //Sliding window is open, send one frame
         this.lastSendingFrameTransmitted++;
         let i = this.lastSendingFrameTransmitted;
-        this.config.channelSend(this.sendingBuffer[i]);
+        this.config.channelSend(this.sendingBuffer[i].clone());
         //console.log(this.name + " - Sent frame: " + this.sendingBuffer[i].data);
       }
     }
@@ -135,9 +155,44 @@ export class Host {
             this.rrResponse = new Frame();
             this.rrResponse.type = FrameType.RR;
             this.rrResponse.number = (this.lastReceivingFrameReceived + 1) % this.config.sequenceMod;
+
           } //end else
         } //end if
       } //end elseif
     } //end if
   } //end updateState()
+
+  public draw(ctx: CanvasRenderingContext2D) {
+    let x = this.x_pos;
+    let y = this.y_pos;
+    //Draw sending buffer
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x, y + this.bufferHeight);
+    ctx.lineTo(x + this.bufferWidth, y + this.bufferHeight);
+    ctx.lineTo(x + this.bufferWidth, y);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+
+    y = y + 3 * this.bufferHeight + 30;
+
+    //Draw receiving buffer
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x, y + this.bufferHeight);
+    ctx.lineTo(x + this.bufferWidth, y + this.bufferHeight);
+    ctx.lineTo(x + this.bufferWidth, y);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+
+    //Draw frames in sending buffer
+    for (let i of this.sendingBuffer) {
+      i.draw(ctx);
+    }
+
+    //Draw frames in receiving buffer
+    for (let i of this.receivingBuffer) {
+      i.draw(ctx);
+    }
+  }
 } //end class
