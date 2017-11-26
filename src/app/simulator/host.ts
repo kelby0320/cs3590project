@@ -13,6 +13,7 @@ export class Host {
   private messageLength: number;
   private rrResponse: Frame;
   private rrResponseIdx: number;
+  private rejected: boolean;
   private readonly config: HostConfig;
   private readonly name: string;
   private readonly x_pos: number;
@@ -34,6 +35,7 @@ export class Host {
     this.messageLength = 0;
     this.rrResponse = null;
     this.rrResponseIdx = null;
+    this.rejected = false;
     this.x_pos = x_pos;
     this.y_pos = y_pos;
     this.bufferWidth = 400;
@@ -137,6 +139,15 @@ export class Host {
 
         this.lastSendingFrameAck = newSendingFrameAck;
       }
+      else if (r.type === FrameType.REJ) {
+        //Reset lastSendingFrameTransmitted to REJ.number - 1
+        for (let i = this.lastSendingFrameAck + 1; i < this.sendingBuffer.length; i++) {
+          if (this.sendingBuffer[i].number === r.number) {
+            this.lastSendingFrameTransmitted = i - 1;
+            break;
+          }
+        }
+      }
       else if (r.type === FrameType.FRAME) {
         //Received Data Frame
         //console.log(this.name + " - Received Frame: " + r.data);
@@ -145,11 +156,19 @@ export class Host {
           let i = this.lastReceivingFrameReceived + 1;
           let f = this.receivingBuffer[i];
 
+          //Frame out of order
           if (f.number !== r.number) {
-            //TODO
-            //Frame out of order
+            //Send reject or discard frames
+            if (this.rejected === false) {
+              this.rejected = true;
+              let rej = new Frame();
+              rej.type = FrameType.REJ;
+              rej.number = f.number;
+              this.config.channelSend(rej);
+            }
           } else {
             //Receive Frame
+            this.rejected = false;
             this.receivingBuffer[i].data = r.data;
             this.lastReceivingFrameReceived++;
 
@@ -158,7 +177,6 @@ export class Host {
             this.rrResponse.type = FrameType.RR;
             this.rrResponse.number = (this.lastReceivingFrameReceived + 1) % this.config.sequenceMod;
             this.rrResponseIdx = this.lastReceivingFrameReceived + 1;
-
           } //end else
         } //end if
       } //end elseif

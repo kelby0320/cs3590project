@@ -3,6 +3,7 @@ import { Host }  from './simulator/host';
 import { HostConfig }  from './simulator/host_config';
 import { Channel } from './simulator/channel';
 import { Frame } from './simulator/frame';
+import { ProgramFactory } from './simulator/program_factory';
 
 @Component({
   selector: 'app-root',
@@ -22,6 +23,7 @@ export class AppComponent implements OnInit {
     this.timestamp = 0;
 
     this.channel = new Channel(10, 100);
+    this.channel.setProgram(ProgramFactory.ErrorFrameTwo());
 
     let host1_config = new HostConfig((f: Frame) => this.channel.sendLeftRight(f), () => this.channel.receiveRightLeft());
     let host2_config = new HostConfig((f: Frame) => this.channel.sendRightLeft(f), () => this.channel.receiveLeftRight());
@@ -36,8 +38,6 @@ export class AppComponent implements OnInit {
   public ngOnInit() {
     let canvas = this.canvasRef.nativeElement;
     let ctx = canvas.getContext('2d');
-
-    console.log(ctx.fillStyle);
 
     this.host1.draw(ctx);
     this.host2.draw(ctx);

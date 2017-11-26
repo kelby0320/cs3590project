@@ -1,4 +1,6 @@
 import { Frame } from './frame';
+import { ChannelProgram } from './channel_program';
+import { ProgramAction, Action } from './program_action';
 
 class TravelingFrame {
   public frame: Frame;
@@ -8,6 +10,7 @@ class TravelingFrame {
 export class Channel {
   private leftRightBuf: TravelingFrame[];
   private rightLeftBuf: TravelingFrame[];
+  private program: ChannelProgram;
   private readonly travelTime: number;
   private readonly travelStep: number;
   private readonly x_pos: number;
@@ -24,6 +27,10 @@ export class Channel {
     this.bufferWidth = 1180;
     this.bufferHeight = 80;
     this.travelStep = this.bufferWidth / this.travelTime;
+  }
+
+  public setProgram(program: ChannelProgram) {
+    this.program = program;
   }
 
   public sendLeftRight(frame: Frame): void {
@@ -65,19 +72,62 @@ export class Channel {
   }
 
   public updateState(timestep: number): void {
+    let leftRightAction = this.program.getCurrentProgramAction("leftRight");
+
     for (let i = 0; i < this.leftRightBuf.length; i++) {
       this.leftRightBuf[i].time++;
       if (this.leftRightBuf[i].frame.x_pos < this.x_pos + this.bufferWidth) {
         this.leftRightBuf[i].frame.x_pos += this.travelStep;
       }
+
+      if (leftRightAction !== null) {
+        let match = this.matchProgramAction(leftRightAction, this.leftRightBuf[i]);
+        if (match) {
+          if (leftRightAction.action == Action.Error) {
+            this.leftRightBuf[i].frame.error = true;
+          }
+          else if (leftRightAction.action == Action.Destroy) {
+            this.leftRightBuf.splice(i, 1);
+          }
+          this.program.completeCurrentProgramAction("leftRight");
+        }
+      }
     }
+
+    let rightLeftAction = this.program.getCurrentProgramAction("rightLeft");
 
     for (let i = 0; i < this.rightLeftBuf.length; i++) {
       this.rightLeftBuf[i].time++;
       if (this.rightLeftBuf[i].frame.x_pos > this.x_pos) {
         this.rightLeftBuf[i].frame.x_pos -= this.travelStep;
       }
+
+      if (rightLeftAction !== null) {
+        let match = this.matchProgramAction(rightLeftAction, this.leftRightBuf[i]);
+        if (match) {
+          if (rightLeftAction.action == Action.Error) {
+            this.leftRightBuf[i].frame.error = true;
+          }
+          else if (rightLeftAction.action == Action.Destroy) {
+            this.leftRightBuf.splice(i, 1);
+          }
+          this.program.completeCurrentProgramAction("rightLeft");
+        }
+      }
     }
+  }
+
+  private matchProgramAction(programAction: ProgramAction, tframe: TravelingFrame) {
+    let match = true;
+    if (programAction.frame.data !== tframe.frame.data ||
+      programAction.frame.type !== tframe.frame.type ||
+      programAction.frame.number !== tframe.frame.number) {
+        match = false;
+    }
+    else if (tframe.time < programAction.time) {
+      match = false;
+    }
+    return match;
   }
 
   public draw(ctx: CanvasRenderingContext2D) {
