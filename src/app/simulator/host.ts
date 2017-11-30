@@ -41,7 +41,7 @@ export class Host {
     this.x_pos = x_pos;
     this.y_pos = y_pos;
     this.bufferWidth = 400;
-    this.bufferHeight = 80;
+    this.bufferHeight = 60;
     this.horizontalGap = 5;
     this.verticalGap = 5;
 
@@ -57,12 +57,12 @@ export class Host {
       f1.number = seqnum;
       f1.type = FrameType.FRAME;
       f1.x_pos = this.x_pos + ((i + 1) * hzgap) + (i * Frame.width);
-      f1.y_pos = this.y_pos + vtgap;
+      f1.y_pos = this.y_pos + vtgap + 10;
 
       f2.number = seqnum;
       f2.type = FrameType.FRAME;
       f2.x_pos = this.x_pos + ((i + 1) * hzgap) + (i * Frame.width);
-      f2.y_pos = this.y_pos + 3 * this.bufferHeight + 30 + vtgap;
+      f2.y_pos = this.y_pos + 3 * this.bufferHeight + 30 + vtgap + 10;
 
       this.sendingBuffer[i] = f1;
       this.receivingBuffer[i] = f2;
@@ -114,7 +114,6 @@ export class Host {
             this.lastSendingFrameTransmitted++;
             let i = this.lastSendingFrameTransmitted;
             this.config.channelSend(this.sendingBuffer[i].clone());
-            //console.log(this.name + " - Sent frame: " + this.sendingBuffer[i].data);
 
             this.timer = 0; //Reset timer
           }
@@ -135,7 +134,6 @@ export class Host {
     if (this.rrResponse !== null && timestep % this.config.stepsPerSend === 0) {
       this.lastReceivingFrameAck = this.rrResponseIdx;
       this.config.channelSend(this.rrResponse);
-      //console.log(this.name + " - Sent RR: " + this.rrResponse.number);
       this.rrResponse = null;
       this.timer = 0; //Reset timer
     }
@@ -185,7 +183,6 @@ export class Host {
       }
       else if (r.type === FrameType.FRAME) {
         //Received Data Frame
-        //console.log(this.name + " - Received Frame: " + r.data);
         let pending = this.lastReceivingFrameReceived - this.lastReceivingFrameAck;
         if (pending < this.config.maxWindowSize) {
           let i = this.lastReceivingFrameReceived + 1;
@@ -221,6 +218,11 @@ export class Host {
   public draw(ctx: CanvasRenderingContext2D) {
     let x = this.x_pos;
     let y = this.y_pos;
+
+    ctx.font = "12px serif";
+    ctx.fillText(this.name, this.x_pos, this.y_pos);
+    y += 10;
+
     //Draw sending buffer
     ctx.beginPath();
     ctx.moveTo(x, y);

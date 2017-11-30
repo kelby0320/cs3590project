@@ -1,6 +1,10 @@
 <div>
+  <div id="controls">
   <button (click)="startSim()">Start Simulation</button>
-  <button (click)="debug()">Debug Simulation</button>
-  <canvas #sim_canvas width="1200" height="380">
-  </canvas>
+  <button (click)="stopSim()">Stop Simulation</button>
+  <button (click)="resetSim()">Reset Simulation</button>
+  </div>
+  <div id="simulation">
+    <canvas #sim_canvas width="1200" height="380"></canvas>
+  </div>
 </div>

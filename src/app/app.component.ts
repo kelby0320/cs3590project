@@ -16,14 +16,55 @@ export class AppComponent implements OnInit {
   public host2: Host;
   public channel: Channel;
   public timestamp: number;
+  public animationFrameRef: any;
   @ViewChild('sim_canvas') canvasRef: ElementRef;
 
   public constructor() {
     this.title = "sim";
     this.timestamp = 0;
 
-    this.channel = new Channel(10, 100);
-    this.channel.setProgram(ProgramFactory.DestroySendingRROneThroughFive());
+    this.reset();
+  }
+
+  public ngOnInit() {
+    let canvas = this.canvasRef.nativeElement;
+    let ctx = canvas.getContext('2d');
+    this.draw(ctx);
+  }
+
+  private updateState() {
+    this.channel.updateState(this.timestamp);
+    this.host1.updateState(this.timestamp);
+    this.host2.updateState(this.timestamp);
+    this.timestamp++;
+
+    let canvas = this.canvasRef.nativeElement;
+    let ctx = canvas.getContext('2d');
+    this.draw(ctx);
+
+    this.animationFrameRef = window.requestAnimationFrame(() => this.updateState());
+  }
+
+  public startSim() {
+    this.animationFrameRef = window.requestAnimationFrame(() => this.updateState());
+  }
+
+  public stopSim() {
+    window.cancelAnimationFrame(this.animationFrameRef);
+  }
+
+  public resetSim() {
+    window.cancelAnimationFrame(this.animationFrameRef);
+    this.reset();
+    this.timestamp = 0;
+    let canvas = this.canvasRef.nativeElement;
+    let ctx = canvas.getContext('2d');
+    this.draw(ctx);
+  }
+
+  private reset() {
+    this.channel = new Channel(10, 90);
+    this.channel.setProgram(ProgramFactory.DefaultProgram());
 
     let host1_config = new HostConfig((f: Frame) => this.channel.sendLeftRight(f), () => this.channel.receiveRightLeft());
     let host2_config = new HostConfig((f: Frame) => this.channel.sendRightLeft(f), () => this.channel.receiveLeftRight());
@@ -35,51 +76,10 @@ export class AppComponent implements OnInit {
     this.host1.setSendMessage(msg);
   }
 
-  public ngOnInit() {
-    let canvas = this.canvasRef.nativeElement;
-    let ctx = canvas.getContext('2d');
-
-    this.host1.draw(ctx);
-    this.host2.draw(ctx);
-    this.channel.draw(ctx);
-  }
-
-  public debug() {
-    for (let i = 0; i < 480; i++) {
-      this.channel.updateState(this.timestamp);
-      this.host1.updateState(this.timestamp);
-      this.host2.updateState(this.timestamp);
-      this.timestamp++;
-    }
-
-    let h2recbuf = this.host2.getReceivingBuffer();
-    let outputString = "";
-    for (let i of h2recbuf) {
-      if (i) {
-        outputString = outputString + i;
-      }
-    }
-    console.log(outputString);
-  }
-
-  private updateState() {
-    this.channel.updateState(this.timestamp);
-    this.host1.updateState(this.timestamp);
-    this.host2.updateState(this.timestamp);
-    this.timestamp++;
-
-    let canvas = this.canvasRef.nativeElement;
-    let ctx = canvas.getContext('2d');
-
+  private draw(ctx: CanvasRenderingContext2D) {
     ctx.clearRect(0, 0, 1200, 380); // clear canvas
     this.host1.draw(ctx);
     this.host2.draw(ctx);
     this.channel.draw(ctx);
-
-    window.requestAnimationFrame(() => this.updateState());
-  }
-
-  public startSim() {
-    window.requestAnimationFrame(() => this.updateState());
   }
 }

@@ -25,7 +25,7 @@ export class Channel {
     this.x_pos = x_pos;
     this.y_pos = y_pos;
     this.bufferWidth = 1180;
-    this.bufferHeight = 80;
+    this.bufferHeight = 60;
     this.travelStep = this.bufferWidth / this.travelTime;
   }
 
@@ -45,7 +45,7 @@ export class Channel {
 
   public sendRightLeft(frame: Frame): void {
     let buf = this.rightLeftBuf;
-    frame.y_pos = this.y_pos + 95;
+    frame.y_pos = this.y_pos + Frame.height + 25;
     frame.x_pos = this.x_pos + this.bufferWidth;
     let movingFrame = new TravelingFrame();
     movingFrame.frame = frame;

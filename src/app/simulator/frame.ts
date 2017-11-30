@@ -9,7 +9,7 @@ export class Frame {
   public x_pos: number;
   public y_pos: number;
   public static readonly width: number = 23;
-  public static readonly height: number = 70;
+  public static readonly height: number = 50;
 
   public constructor() {
     this.error = false;
@@ -38,7 +38,7 @@ export class Frame {
     let filltext = (this.p) ? "P" : String(this.number);
     ctx.font = "12px serif";
     ctx.fillText(header, this.x_pos + 5, this.y_pos + 15);
-    ctx.fillText(filltext, this.x_pos + 5, this.y_pos + 65);
+    ctx.fillText(filltext, this.x_pos + 5, this.y_pos + Frame.height - 5);
 
     ctx.moveTo(this.x_pos, this.y_pos);
     ctx.lineTo(this.x_pos, this.y_pos + Frame.height);
