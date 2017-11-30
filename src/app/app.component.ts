@@ -23,7 +23,7 @@ export class AppComponent implements OnInit {
     this.timestamp = 0;
 
     this.channel = new Channel(10, 100);
-    this.channel.setProgram(ProgramFactory.ErrorFrameTwo());
+    this.channel.setProgram(ProgramFactory.DestroySendingRROneThroughFive());
 
     let host1_config = new HostConfig((f: Frame) => this.channel.sendLeftRight(f), () => this.channel.receiveRightLeft());
     let host2_config = new HostConfig((f: Frame) => this.channel.sendRightLeft(f), () => this.channel.receiveLeftRight());

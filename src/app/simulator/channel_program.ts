@@ -30,7 +30,7 @@ export class ChannelProgram {
     }
     else if (buffer === "rightLeft") {
       if (this.rightLeftActions[this.currentRightLeft])
-        return this.rightLeftActions[this.currentLeftRight];
+        return this.rightLeftActions[this.currentRightLeft];
       return null;
     }
   }

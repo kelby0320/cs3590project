@@ -14,6 +14,7 @@ export class Host {
   private rrResponse: Frame;
   private rrResponseIdx: number;
   private rejected: boolean;
+  private timer: number;
   private readonly config: HostConfig;
   private readonly name: string;
   private readonly x_pos: number;
@@ -36,6 +37,7 @@ export class Host {
     this.rrResponse = null;
     this.rrResponseIdx = null;
     this.rejected = false;
+    this.timer = 0;
     this.x_pos = x_pos;
     this.y_pos = y_pos;
     this.bufferWidth = 400;
@@ -97,34 +99,63 @@ export class Host {
   }
 
   public updateState(timestep: number): void {
-    //Send Frame
-    if (this.lastSendingFrameTransmitted < this.messageLength - 1 &&
-      timestep % this.config.stepsPerSend === 0) {
-      //There are frames to be transmitted
-      let pending = this.lastSendingFrameTransmitted - this.lastSendingFrameAck;
-      if (pending < this.config.maxWindowSize) {
-        //Sliding window is open, send one frame
-        this.lastSendingFrameTransmitted++;
-        let i = this.lastSendingFrameTransmitted;
-        this.config.channelSend(this.sendingBuffer[i].clone());
-        //console.log(this.name + " - Sent frame: " + this.sendingBuffer[i].data);
+    //Increment timer
+    this.timer++;
+
+    if (this.lastSendingFrameTransmitted < this.messageLength - 1) {
+      //There is stuff left to send
+      if (this.timer < this.config.timeLimit) {
+        //We are within the time limit
+        if (timestep % this.config.stepsPerSend === 0) {
+          //Send Frame
+          let pending = this.lastSendingFrameTransmitted - this.lastSendingFrameAck;
+          if (pending < this.config.maxWindowSize) {
+            //Sliding window is open, send one frame
+            this.lastSendingFrameTransmitted++;
+            let i = this.lastSendingFrameTransmitted;
+            this.config.channelSend(this.sendingBuffer[i].clone());
+            //console.log(this.name + " - Sent frame: " + this.sendingBuffer[i].data);
+
+            this.timer = 0; //Reset timer
+          }
+        }
+      }
+      else {
+        //The timer has expired
+        let frame = new Frame();
+        frame.type = FrameType.RR;
+        frame.p = true;
+        this.config.channelSend(frame);
+        this.timer = 0; //Reset timer;
+        return;
       }
     }
 
     //Send RR rrResponse
-    if (this.rrResponse !== null &&
-      timestep % this.config.stepsPerSend === 0) {
+    if (this.rrResponse !== null && timestep % this.config.stepsPerSend === 0) {
       this.lastReceivingFrameAck = this.rrResponseIdx;
       this.config.channelSend(this.rrResponse);
       //console.log(this.name + " - Sent RR: " + this.rrResponse.number);
       this.rrResponse = null;
+      this.timer = 0; //Reset timer
     }
 
     //Receive Frame
     let r = this.config.channelReceive();
     if (r !== null && r.error !== true) {
       if (r.type === FrameType.RR) {
-        //console.log(this.name + " - Recieved RR: " + r.number);
+        if (r.p == true) {
+          let i = this.lastReceivingFrameReceived + 1;
+          let f = this.receivingBuffer[i];
+
+          let frame = new Frame();
+          frame.type = FrameType.RR;
+          frame.number = f.number;
+          this.config.channelSend(frame);
+          this.timer = 0; //Reset timer
+          return;
+        }
+
         //Received RR Frame
         let acked = (r.number - 1) % this.config.sequenceMod;
         let newSendingFrameAck = 0;
@@ -136,8 +167,9 @@ export class Host {
             break;
           }
         }
-
         this.lastSendingFrameAck = newSendingFrameAck;
+        //Reset timer
+        this.timer = 0;
       }
       else if (r.type === FrameType.REJ) {
         //Reset lastSendingFrameTransmitted to REJ.number - 1
@@ -147,6 +179,9 @@ export class Host {
             break;
           }
         }
+
+        //Reset timer
+        this.timer = 0;
       }
       else if (r.type === FrameType.FRAME) {
         //Received Data Frame

@@ -1,4 +1,4 @@
-import { Frame } from './frame';
+import { Frame, FrameType } from './frame';
 import { ChannelProgram } from './channel_program';
 import { ProgramAction, Action } from './program_action';
 
@@ -74,6 +74,7 @@ export class Channel {
   public updateState(timestep: number): void {
     let leftRightAction = this.program.getCurrentProgramAction("leftRight");
 
+    //Update positions in leftRightBuf
     for (let i = 0; i < this.leftRightBuf.length; i++) {
       this.leftRightBuf[i].time++;
       if (this.leftRightBuf[i].frame.x_pos < this.x_pos + this.bufferWidth) {
@@ -92,10 +93,11 @@ export class Channel {
           this.program.completeCurrentProgramAction("leftRight");
         }
       }
-    }
+    } //end for
 
     let rightLeftAction = this.program.getCurrentProgramAction("rightLeft");
 
+    //Update positions in rightLeftBuf
     for (let i = 0; i < this.rightLeftBuf.length; i++) {
       this.rightLeftBuf[i].time++;
       if (this.rightLeftBuf[i].frame.x_pos > this.x_pos) {
@@ -103,28 +105,40 @@ export class Channel {
       }
 
       if (rightLeftAction !== null) {
-        let match = this.matchProgramAction(rightLeftAction, this.leftRightBuf[i]);
+        let match = this.matchProgramAction(rightLeftAction, this.rightLeftBuf[i]);
         if (match) {
           if (rightLeftAction.action == Action.Error) {
-            this.leftRightBuf[i].frame.error = true;
+            this.rightLeftBuf[i].frame.error = true;
           }
           else if (rightLeftAction.action == Action.Destroy) {
-            this.leftRightBuf.splice(i, 1);
+            this.rightLeftBuf.splice(i, 1);
           }
           this.program.completeCurrentProgramAction("rightLeft");
         }
       }
-    }
-  }
+    } //end for
+  } //end updateState
 
   private matchProgramAction(programAction: ProgramAction, tframe: TravelingFrame) {
     let match = true;
-    if (programAction.frame.data !== tframe.frame.data ||
-      programAction.frame.type !== tframe.frame.type ||
-      programAction.frame.number !== tframe.frame.number) {
-        match = false;
+    if (tframe.frame.type === FrameType.FRAME) {
+      //Try to match a frame
+      if (programAction.frame.data !== tframe.frame.data ||
+        programAction.frame.type !== tframe.frame.type ||
+        programAction.frame.number !== tframe.frame.number) {
+          match = false;
+      }
     }
-    else if (tframe.time < programAction.time) {
+    else if (tframe.frame.type === FrameType.RR) {
+      //Try to match an rr
+      if (programAction.frame.type !== tframe.frame.type ||
+        programAction.frame.number !== tframe.frame.number) {
+          match = false;
+      }
+    }
+
+    if (tframe.time < programAction.time) {
+      //match time
       match = false;
     }
     return match;

@@ -5,10 +5,16 @@ export class Frame {
   public number: number;
   public type: FrameType;
   public error: boolean;
+  public p: boolean;
   public x_pos: number;
   public y_pos: number;
   public static readonly width: number = 23;
   public static readonly height: number = 70;
+
+  public constructor() {
+    this.error = false;
+    this.p = false;
+  }
 
   public clone(): Frame {
     let f = new Frame();
@@ -16,6 +22,7 @@ export class Frame {
     f.number = this.number;
     f.type = this.type;
     f.error = this.error;
+    f.p = this.p
     f.x_pos = this.x_pos;
     f.y_pos = this.y_pos;
     return f;
@@ -28,9 +35,10 @@ export class Frame {
     if (header === "Frame")
       header = (this.data) ? this.data : "";
 
+    let filltext = (this.p) ? "P" : String(this.number);
     ctx.font = "12px serif";
     ctx.fillText(header, this.x_pos + 5, this.y_pos + 15);
-    ctx.fillText(String(this.number), this.x_pos + 5, this.y_pos + 65);
+    ctx.fillText(filltext, this.x_pos + 5, this.y_pos + 65);
 
     ctx.moveTo(this.x_pos, this.y_pos);
     ctx.lineTo(this.x_pos, this.y_pos + Frame.height);
@@ -42,7 +50,7 @@ export class Frame {
       ctx.fillStyle = FillStyle.FrameErr;
     else
       ctx.fillStyle = FillStyle.FrameOK;
-      
+
     ctx.fill();
     ctx.fillStyle = FillStyle.Default;
   }
