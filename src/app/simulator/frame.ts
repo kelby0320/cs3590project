@@ -56,7 +56,7 @@ export class Frame {
   }
 }
 
-export enum FrameType {FRAME, ACK, REJ, RR}
+export enum FrameType {FRAME, REJ, RR}
 
 function FrameTypeToString(type: FrameType): string {
   let str = "";
@@ -66,7 +66,5 @@ function FrameTypeToString(type: FrameType): string {
     str = "RR";
   else if (type === FrameType.REJ)
     str = "REJ";
-  else if (type === FrameType.ACK)
-    str = "ACK";
   return str;
 }

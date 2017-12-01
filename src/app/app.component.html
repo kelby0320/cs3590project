@@ -1,8 +1,12 @@
 <div>
+  <h2>Go-Back-N ARQ Simulation</h2>
   <div id="controls">
   <button (click)="startSim()">Start Simulation</button>
   <button (click)="stopSim()">Stop Simulation</button>
   <button (click)="resetSim()">Reset Simulation</button>
+  <select [(ngModel)]="selectedProgram" (change)="resetSim()">
+     <option *ngFor="let program of programs; index as i" [ngValue]="i">{{program.name}}</option>
+  </select>
   </div>
   <div id="simulation">
     <canvas #sim_canvas width="1200" height="380"></canvas>

@@ -129,7 +129,7 @@ export class Channel {
           match = false;
       }
     }
-    else if (tframe.frame.type === FrameType.RR) {
+    else if (tframe.frame.type === FrameType.RR || tframe.frame.type === FrameType.REJ) {
       //Try to match an rr
       if (programAction.frame.type !== tframe.frame.type ||
         programAction.frame.number !== tframe.frame.number) {

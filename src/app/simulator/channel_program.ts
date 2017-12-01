@@ -1,12 +1,14 @@
 import { ProgramAction, Action} from './program_action'
 
 export class ChannelProgram {
+  public name: string;
   private leftRightActions: Array<ProgramAction>;
   private rightLeftActions: Array<ProgramAction>;
   private currentLeftRight: number;
   private currentRightLeft: number;
 
-  public constructor() {
+  public constructor(name: string) {
+    this.name = name;
     this.leftRightActions = new Array<ProgramAction>();
     this.rightLeftActions = new Array<ProgramAction>();
     this.currentLeftRight = 0;

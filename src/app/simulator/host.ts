@@ -15,6 +15,7 @@ export class Host {
   private rrResponseIdx: number;
   private rejected: boolean;
   private timer: number;
+  private waitingOnRR: boolean;
   private readonly config: HostConfig;
   private readonly name: string;
   private readonly x_pos: number;
@@ -38,6 +39,7 @@ export class Host {
     this.rrResponseIdx = null;
     this.rejected = false;
     this.timer = 0;
+    this.waitingOnRR = false;
     this.x_pos = x_pos;
     this.y_pos = y_pos;
     this.bufferWidth = 400;
@@ -126,6 +128,7 @@ export class Host {
         frame.p = true;
         this.config.channelSend(frame);
         this.timer = 0; //Reset timer;
+        this.waitingOnRR = true;
         return;
       }
     }
@@ -141,8 +144,10 @@ export class Host {
     //Receive Frame
     let r = this.config.channelReceive();
     if (r !== null && r.error !== true) {
+      //Received RR Frame
       if (r.type === FrameType.RR) {
         if (r.p == true) {
+          //Recieved signal to resynchronize
           let i = this.lastReceivingFrameReceived + 1;
           let f = this.receivingBuffer[i];
 
@@ -154,18 +159,34 @@ export class Host {
           return;
         }
 
-        //Received RR Frame
-        let acked = (r.number - 1) % this.config.sequenceMod;
+        let id = r.number - 1;
+        id = (id < 0) ? id + 8 : id;
+        let acked = id % this.config.sequenceMod;
         let newSendingFrameAck = 0;
 
         //Find new LastFrameAck
-        for (let i = this.lastSendingFrameAck + 1; i < this.sendingBuffer.length; i++) {
-          if (this.sendingBuffer[i].number == acked) {
-            newSendingFrameAck = i;
-            break;
+        //
+        //Check current LastFrameAck
+        //This is for the case when the same RR is sent twice
+        if (this.sendingBuffer[this.lastSendingFrameAck] &&
+          this.sendingBuffer[this.lastSendingFrameAck].number == acked) {
+          newSendingFrameAck = this.lastSendingFrameAck
+        }
+        else {
+          for (let i = this.lastSendingFrameAck + 1; i < this.sendingBuffer.length; i++) {
+            if (this.sendingBuffer[i].number == acked) {
+              newSendingFrameAck = i;
+              break;
+            }
           }
         }
         this.lastSendingFrameAck = newSendingFrameAck;
+
+        if (this.waitingOnRR) {
+          //Reset sliding window
+          this.lastSendingFrameTransmitted = this.lastSendingFrameAck;
+          this.waitingOnRR = false;
+        }
         //Reset timer
         this.timer = 0;
       }
